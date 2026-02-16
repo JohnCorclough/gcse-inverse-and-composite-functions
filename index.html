@@ -1,180 +1,386 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Inverse & Composite Functions Quiz</title>
 
 <style>
-    body {
-        font-family: Arial, sans-serif;
-        background: #f2f2f2;
-        margin: 0;
-        padding: 0;
-        display: flex;
-        justify-content: center;
-    }
+  :root {
+    --bg: #f2f2f2;
+    --card: #ffffff;
+    --shadow: rgba(0,0,0,0.15);
+    --btn: #e9e9e9;
+    --btnActive: #dcdcdc;
 
-    .card {
-        background: white;
-        margin: 10px;
-        padding: 18px;
-        border-radius: 12px;
-        width: 95%;
-        max-width: 720px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
+    --okBg: #d8f5d8;     /* green-ish */
+    --badBg: #ffd9d9;    /* red-ish */
+    --explainText: #111;
+  }
 
-    h2 {
-        margin-top: 0;
-        font-size: 20px;
-    }
+  body{
+    font-family: Arial, sans-serif;
+    background: var(--bg);
+    margin: 0;
+    padding: 0;
+    display:flex;
+    justify-content:center;
+  }
 
-    button {
-        display: block;
-        width: 100%;
-        margin: 10px 0;
-        padding: 14px;
-        font-size: 16px;
-        border-radius: 8px;
-        border: none;
-        background: #e9e9e9;
-        cursor: pointer;
-    }
+  .card{
+    background: var(--card);
+    margin: 10px;
+    padding: 18px;
+    border-radius: 12px;
+    width: 95%;
+    max-width: 780px;
+    box-shadow: 0 4px 12px var(--shadow);
+  }
 
-    button:active {
-        background: #dcdcdc;
-    }
+  h2{
+    margin: 0 0 10px 0;
+    font-size: 20px;
+  }
 
-    .feedback {
-        margin-top: 10px;
-        font-weight: bold;
-        min-height: 24px;
-    }
+  #question{
+    font-size: 16px;
+    line-height: 1.35;
+    margin: 12px 0;
+  }
 
-    .meta {
-        margin-top: 10px;
-        font-size: 14px;
-    }
+  .answers button{
+    display:block;
+    width:100%;
+    margin: 10px 0;
+    padding: 14px;
+    font-size: 16px;
+    border-radius: 10px;
+    border: none;
+    background: var(--btn);
+    cursor:pointer;
+  }
 
-    @media (min-width: 600px) {
-        h2 { font-size: 22px; }
-        button { font-size: 15px; padding: 12px; }
-    }
+  .answers button:active{
+    background: var(--btnActive);
+  }
+
+  .answers button:disabled{
+    cursor: default;
+    opacity: 0.85;
+  }
+
+  .explain{
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 10px;
+    color: var(--explainText);
+    min-height: 44px;
+    display: none; /* hidden until answered */
+  }
+
+  .explain.ok{ background: var(--okBg); display:block; }
+  .explain.bad{ background: var(--badBg); display:block; }
+
+  .controls{
+    margin-top: 12px;
+  }
+
+  .controls button{
+    width: 100%;
+    padding: 14px;
+    border-radius: 10px;
+    border: none;
+    background: #dfe9ff;
+    cursor: pointer;
+    font-size: 16px;
+  }
+
+  .controls button:active{
+    filter: brightness(0.96);
+  }
+
+  .meta{
+    margin-top: 10px;
+    font-size: 14px;
+  }
+
+  .small{
+    opacity: 0.85;
+  }
+
+  @media (min-width: 600px){
+    h2{ font-size: 22px; }
+    #question{ font-size: 16px; }
+    .answers button{ font-size: 15px; padding: 12px; }
+    .controls button{ font-size: 15px; padding: 12px; }
+  }
 </style>
 </head>
 
 <body>
-<div class="card">
+  <div class="card">
     <h2>Inverse & Composite Functions</h2>
-    <div id="question"></div>
-    <div id="answers"></div>
-    <div class="feedback" id="feedback"></div>
 
-    <button onclick="nextQuestion()">Next Question</button>
+    <div id="question"></div>
+
+    <div class="answers" id="answers"></div>
+
+    <div class="explain" id="explainBox"></div>
+
+    <div class="controls">
+      <button id="nextBtn" onclick="nextQuestion()">Next Question</button>
+    </div>
 
     <div class="meta" id="progress"></div>
     <div class="meta" id="score"></div>
-</div>
+    <div class="meta small" id="mode"></div>
+  </div>
 
 <script>
-let originalQuiz = [
-    { topic: "Inverse Functions", q: "f(x) = 3x + 5. What is f⁻¹(x)?",
-      options: ["(x − 5) / 3", "3x − 5", "(x + 5) / 3", "1 / (3x + 5)"], answer: 0 },
+/*
+  Features included:
+  ✅ Randomised order (each run + each retry round)
+  ✅ Retry-incorrect mode (only wrong questions repeat)
+  ✅ Mobile-optimised layout (touch-friendly buttons)
+  ✅ Per-question explanation box:
+       - green background if correct
+       - red background if incorrect
+       - explains why
+*/
 
-    { topic: "Inverse Functions", q: "f(x) = 2x − 7. Find f⁻¹(5).",
-      options: ["6", "−1", "4", "12"], answer: 0 },
+const originalQuiz = [
+  // Inverse functions (3)
+  {
+    topic: "Inverse Functions",
+    q: "f(x) = 3x + 5. What is f⁻¹(x)?",
+    options: ["(x − 5) / 3", "3x − 5", "(x + 5) / 3", "1 / (3x + 5)"],
+    answer: 0,
+    explainCorrect:
+      "To find the inverse: let y = 3x + 5, swap x and y: x = 3y + 5, then solve for y: y = (x − 5)/3.",
+    explainWrong:
+      "Inverse means ‘undo’ the function. You must swap x and y and then rearrange for y. The correct rearrangement gives (x − 5)/3."
+  },
+  {
+    topic: "Inverse Functions",
+    q: "f(x) = 2x − 7. Find f⁻¹(5).",
+    options: ["6", "−1", "4", "12"],
+    answer: 0,
+    explainCorrect:
+      "First find f⁻¹(x): y = 2x − 7 → swap: x = 2y − 7 → x + 7 = 2y → y = (x + 7)/2. Then f⁻¹(5) = (5 + 7)/2 = 6.",
+    explainWrong:
+      "You need f⁻¹(5): find the inverse rule first: f⁻¹(x) = (x + 7)/2, then substitute x = 5 to get 6."
+  },
+  {
+    topic: "Inverse Functions",
+    q: "f(x) = x + 4. Which statement is true?",
+    options: ["f⁻¹(x) = x − 4", "f⁻¹(x) = x + 4", "f⁻¹(x) = 1/(x+4)", "No inverse exists"],
+    answer: 0,
+    explainCorrect:
+      "f(x) adds 4, so the inverse must ‘subtract 4’ to undo it: f⁻¹(x) = x − 4.",
+    explainWrong:
+      "An inverse undoes the function. Since f(x) = x + 4 adds 4, the inverse must subtract 4."
+  },
 
-    { topic: "Inverse Functions", q: "f(x) = x + 4. Which statement is true?",
-      options: ["f⁻¹(x) = x − 4", "f⁻¹(x) = x + 4", "f⁻¹(x) = 1/(x+4)", "No inverse exists"], answer: 0 },
-
-    { topic: "Composite Functions", q: "f(x) = x², g(x) = x + 3. Find f(g(x)).",
-      options: ["(x + 3)²", "x² + 3", "x² + 9", "2x + 3"], answer: 0 },
-
-    { topic: "Composite Functions", q: "f(x) = 2x, g(x) = x − 4. Find f(g(x)).",
-      options: ["2x − 4", "2x − 8", "x − 8", "2x + 8"], answer: 1 },
-
-    { topic: "Composite Functions", q: "f(x) = x + 1, g(x) = 3x. Find f(g(x)).",
-      options: ["3x + 1", "3x + 3", "x + 4", "3(x + 1)"], answer: 0 },
-
-    { topic: "Composite Functions", q: "f(x) = x² + 2, g(x) = x − 1. Find f(g(x)).",
-      options: ["(x − 1)² + 2", "x² + 1", "x² − 1 + 2", "(x²+2)−1"], answer: 0 },
-
-    { topic: "Composite Functions", q: "f(x) = 5 − x, g(x) = 2x. Find f(g(x)).",
-      options: ["5 − 2x", "10 − x", "2x − 5", "5x − 2"], answer: 0 }
+  // Composite functions (5) — up to f(g(x)) only
+  {
+    topic: "Composite Functions",
+    q: "f(x) = x², g(x) = x + 3. Find f(g(x)).",
+    options: ["(x + 3)²", "x² + 3", "x² + 9", "2x + 3"],
+    answer: 0,
+    explainCorrect:
+      "f(g(x)) means ‘put g(x) into f’. Since f(x)=x², replace x by (x+3): f(g(x)) = (x+3)².",
+    explainWrong:
+      "Composition means substitute g(x) into f(x). Here f(x)=x², so square the whole g(x): (x+3)²."
+  },
+  {
+    topic: "Composite Functions",
+    q: "f(x) = 2x, g(x) = x − 4. Find f(g(x)).",
+    options: ["2x − 4", "2x − 8", "x − 8", "2x + 8"],
+    answer: 1,
+    explainCorrect:
+      "Substitute g(x) into f: f(g(x)) = 2(g(x)) = 2(x−4) = 2x − 8.",
+    explainWrong:
+      "f(g(x)) = 2(g(x)), not 2x then minus 4. You must multiply the whole bracket: 2(x−4)=2x−8."
+  },
+  {
+    topic: "Composite Functions",
+    q: "f(x) = x + 1, g(x) = 3x. Find f(g(x)).",
+    options: ["3x + 1", "3x + 3", "x + 4", "3(x + 1)"],
+    answer: 0,
+    explainCorrect:
+      "Put g(x) into f: f(g(x)) = g(x) + 1 = 3x + 1.",
+    explainWrong:
+      "f(g(x)) means replace x in f(x)=x+1 with g(x)=3x. So it becomes 3x + 1."
+  },
+  {
+    topic: "Composite Functions",
+    q: "f(x) = x² + 2, g(x) = x − 1. Find f(g(x)).",
+    options: ["(x − 1)² + 2", "x² + 1", "x² − 1 + 2", "(x²+2)−1"],
+    answer: 0,
+    explainCorrect:
+      "Replace x in f(x)=x²+2 with (x−1): f(g(x)) = (x−1)² + 2. Don’t forget to square the whole bracket.",
+    explainWrong:
+      "You must substitute g(x) into f. Because f has x², you square the entire (x−1): (x−1)² + 2."
+  },
+  {
+    topic: "Composite Functions",
+    q: "f(x) = 5 − x, g(x) = 2x. Find f(g(x)).",
+    options: ["5 − 2x", "10 − x", "2x − 5", "5x − 2"],
+    answer: 0,
+    explainCorrect:
+      "Substitute g(x)=2x into f(x)=5−x: f(g(x)) = 5 − (2x) = 5 − 2x.",
+    explainWrong:
+      "Composition means replace x with g(x). Here that gives 5 − (2x), which simplifies to 5 − 2x."
+  }
 ];
+
+function shuffle(arr){
+  for(let i = arr.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
 
 let quiz = shuffle([...originalQuiz]);
 let incorrectQuestions = [];
 let current = 0;
 let score = 0;
 
-function shuffle(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-    }
-    return array;
+let answeredThisQuestion = false;
+let inRetryRound = false;
+
+const questionEl = document.getElementById("question");
+const answersEl = document.getElementById("answers");
+const explainBox = document.getElementById("explainBox");
+const progressEl = document.getElementById("progress");
+const scoreEl = document.getElementById("score");
+const modeEl = document.getElementById("mode");
+const nextBtn = document.getElementById("nextBtn");
+
+function setButtonsEnabled(enabled){
+  const btns = answersEl.querySelectorAll("button");
+  btns.forEach(b => b.disabled = !enabled);
 }
 
-function loadQuestion() {
-    if (current >= quiz.length) {
-        if (incorrectQuestions.length > 0) {
-            quiz = shuffle([...incorrectQuestions]);
-            incorrectQuestions = [];
-            current = 0;
-            document.getElementById("feedback").innerHTML =
-                "Retrying incorrect questions.";
-        } else {
-            document.getElementById("question").innerHTML = "Quiz complete.";
-            document.getElementById("answers").innerHTML = "";
-            document.getElementById("feedback").innerHTML = "";
-            document.getElementById("progress").innerHTML = "";
-            document.getElementById("score").innerHTML =
-                "Final Score: " + score;
-            return;
-        }
-    }
-
-    const item = quiz[current];
-
-    document.getElementById("question").innerHTML =
-        "<strong>" + item.topic + "</strong><br><br>" + item.q;
-
-    const answersDiv = document.getElementById("answers");
-    answersDiv.innerHTML = "";
-
-    item.options.forEach((opt, i) => {
-        const btn = document.createElement("button");
-        btn.innerText = opt;
-        btn.onclick = () => checkAnswer(i);
-        answersDiv.appendChild(btn);
-    });
-
-    document.getElementById("progress").innerHTML =
-        "Question " + (current + 1) + " of " + quiz.length;
-
-    document.getElementById("score").innerHTML =
-        "Score: " + score;
+function renderMode(){
+  modeEl.textContent = inRetryRound
+    ? "Mode: Retry incorrect questions"
+    : "Mode: Main quiz (random order)";
 }
 
-function checkAnswer(choice) {
-    const item = quiz[current];
+function loadQuestion(){
+  // If finished this round
+  if(current >= quiz.length){
+    if(incorrectQuestions.length > 0){
+      // start retry round with only incorrect questions
+      quiz = shuffle([...incorrectQuestions]);
+      incorrectQuestions = [];
+      current = 0;
+      inRetryRound = true;
+      renderMode();
 
-    if (choice === item.answer) {
-        document.getElementById("feedback").innerHTML = "Correct.";
-        score++;
-    } else {
-        document.getElementById("feedback").innerHTML = "Incorrect.";
-        incorrectQuestions.push(item);
+      // brief message
+      questionEl.innerHTML = "<strong>Retry time!</strong><br><br>Now you’ll redo only the questions you got wrong.";
+      answersEl.innerHTML = "";
+      explainBox.className = "explain";
+      explainBox.style.display = "none";
+      progressEl.textContent = "";
+      scoreEl.textContent = "Score: " + score;
+      nextBtn.textContent = "Start Retry";
+      answeredThisQuestion = true; // allow Next
+      return;
     }
+
+    // Fully complete
+    questionEl.innerHTML = "<strong>Quiz complete.</strong><br><br>You have finished all questions (including retries).";
+    answersEl.innerHTML = "";
+    explainBox.className = "explain";
+    explainBox.style.display = "none";
+    progressEl.textContent = "";
+    scoreEl.textContent = "Final Score: " + score + " / " + originalQuiz.length;
+    modeEl.textContent = "";
+    nextBtn.textContent = "Restart";
+    answeredThisQuestion = true;
+    return;
+  }
+
+  // Normal question render
+  const item = quiz[current];
+  answeredThisQuestion = false;
+  nextBtn.textContent = "Next Question";
+
+  questionEl.innerHTML = "<strong>" + item.topic + "</strong><br><br>" + item.q;
+
+  answersEl.innerHTML = "";
+  item.options.forEach((opt, i) => {
+    const btn = document.createElement("button");
+    btn.textContent = opt;
+    btn.onclick = () => checkAnswer(i);
+    answersEl.appendChild(btn);
+  });
+
+  explainBox.className = "explain";
+  explainBox.style.display = "none";
+
+  progressEl.textContent = "Question " + (current + 1) + " of " + quiz.length;
+  scoreEl.textContent = "Score: " + score;
+  renderMode();
+  setButtonsEnabled(true);
 }
 
-function nextQuestion() {
-    current++;
-    document.getElementById("feedback").innerHTML = "";
+function checkAnswer(choice){
+  if(answeredThisQuestion) return;
+
+  const item = quiz[current];
+  answeredThisQuestion = true;
+  setButtonsEnabled(false);
+
+  if(choice === item.answer){
+    score++;
+    explainBox.className = "explain ok";
+    explainBox.innerHTML = "✅ <strong>Correct.</strong><br><br>" + item.explainCorrect;
+  } else {
+    incorrectQuestions.push(item);
+    explainBox.className = "explain bad";
+
+    const correctText = item.options[item.answer];
+    explainBox.innerHTML =
+      "❌ <strong>Incorrect.</strong><br><br>" +
+      item.explainWrong +
+      "<br><br><strong>Correct answer:</strong> " + correctText;
+  }
+
+  scoreEl.textContent = "Score: " + score;
+}
+
+function nextQuestion(){
+  // If finished and button says Restart
+  if(nextBtn.textContent === "Restart"){
+    quiz = shuffle([...originalQuiz]);
+    incorrectQuestions = [];
+    current = 0;
+    score = 0;
+    inRetryRound = false;
     loadQuestion();
+    return;
+  }
+
+  // Prevent skipping without answering (except the retry intro screen)
+  if(!answeredThisQuestion){
+    // gentle nudge (no encouragement fluff)
+    explainBox.className = "explain bad";
+    explainBox.style.display = "block";
+    explainBox.innerHTML = "Please choose an answer before moving on.";
+    return;
+  }
+
+  // Move on
+  current++;
+  loadQuestion();
 }
 
+// Start
 loadQuestion();
 </script>
 </body>
